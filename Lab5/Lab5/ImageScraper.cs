@@ -42,13 +42,14 @@ namespace Lab5
                 return;
             }
 
-            var urlInputTask = ExtractImages("http://www." + input);
-            await urlInputTask;
-
             if (!input.Contains("https://"))
             {
                 input = $"http://{input}";
             }
+
+            var urlInputTask = ExtractImages(input);
+            await urlInputTask;
+
 
             var matches = Pattern.Matches(urlInputTask.Result);
             
