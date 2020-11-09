@@ -18,7 +18,7 @@ namespace Lab5
         public ImageScraper()
         {
             InitializeComponent();
-            Pattern = new Regex(@"(?<=<img.*src="")[^""]*");
+            Pattern = new Regex("<img.*src=\"(.*?(jpg|jpeg|png|gif|bmp).*?)\"");
             FileExtension = new Regex(@"\.(png|jpg|jpeg|gif|bmp)");
         }
 
@@ -28,7 +28,7 @@ namespace Lab5
             {
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    await DownloadImages(dialog.SelectedPath);  
+                    await DownloadImages(dialog.SelectedPath);
                 }
             }
         }
@@ -45,12 +45,13 @@ namespace Lab5
             var urlInputTask = ExtractImages("http://www." + input);
             await urlInputTask;
 
-            if (!input.Contains("http://"))
+            if (!input.Contains("https://"))
             {
                 input = $"http://{input}";
             }
 
             var matches = Pattern.Matches(urlInputTask.Result);
+            
 
             for (int i = 0; i < matches.Count; i++)
             {
@@ -58,14 +59,22 @@ namespace Lab5
 
                 if (matches[i].Value.Contains("http"))
                 {
-                    result = matches[i].Value + Environment.NewLine;
+                    result = matches[i].Groups[1].Value;
                 }
-                else if(!string.IsNullOrWhiteSpace(matches[i].Value))
+                else if (!string.IsNullOrWhiteSpace(matches[i].Value))
                 {
-                    result = "gp.se" + matches[i] + Environment.NewLine;
+                    result = "gp.se" + matches[i].Groups[1];
                 }
-                ImageURLs.Add(result);
-                textBox1.Text += result;
+
+                if (!matches[i].Groups[1].ToString().Contains("https://"))
+                {
+                    ImageURLs.Add("http://" + result);
+                }
+                else
+                {
+                    ImageURLs.Add(result);
+                }
+                textBox1.Text += result + Environment.NewLine;
 
                 labelNumberOfImages.Text = "Found " + ImageURLs.Count.ToString() + " images.";
             }
@@ -90,7 +99,7 @@ namespace Lab5
             foreach (var image in imageArray)
             {
                 var match = FileExtension.Matches(image);
-                Dictionary.Add(client.GetByteArrayAsync(image), match[0].Value);
+                Dictionary.Add(client.GetByteArrayAsync(image), match[0].Groups[1].Value);
             }
 
             var i = 1;
@@ -101,12 +110,13 @@ namespace Lab5
                 var extension = Dictionary[finishedTasks];
                 var result = finishedTasks.Result;
 
-                var fileSream = new FileStream($"{path}\\image{i}{extension}", FileMode.Create);
-                i++;
+                var fileSream = new FileStream($"{path}\\image{i}.{extension}", FileMode.Create);
                 await fileSream.WriteAsync(result, 0, result.Length);
+                i++;
 
                 Dictionary.Remove(finishedTasks);
             }
+                MessageBox.Show($"Downloaded {i-1} images out of {ImageURLs.Count}");
         }
     }
 }
